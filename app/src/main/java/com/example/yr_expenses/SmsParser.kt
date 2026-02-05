@@ -2,7 +2,9 @@ package com.example.yr_expenses
 
 import android.content.Context
 import android.util.Log
+import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 
 object SmsParser {
 
@@ -28,19 +30,26 @@ object SmsParser {
 
         if (amount != null) {
 
+            val timestamp = System.currentTimeMillis()
+
             val json = JSONObject().apply {
                 put("amount", amount)
                 put("merchant", merchant)
                 put("mode", mode)
-                put("timestamp", System.currentTimeMillis().toString())
+                put("timestamp", timestamp)
                 put("raw", body)
             }
 
             Log.d("SMS_PARSED", json.toString())
 
+            // 1️⃣ Send to Mint
             ApiClient.send(context, json)
+
+            // 2️⃣ Save locally to JSON
+            LocalJsonStorage.save(context, json)
+
         } else {
-            Log.d("SMS_PARSED", "Could not extract amount from: $body")
+            Log.d("SMS_PARSED", "Failed parse: $body")
         }
     }
 }

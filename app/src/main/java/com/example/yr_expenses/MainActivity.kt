@@ -28,9 +28,8 @@ class MainActivity : ComponentActivity() {
         )
 
         setContent {
-            MaterialTheme {
-                Text("YR Expenses — Listening for Bank SMS…")
-            }
+            TransactionListScreen(this)
         }
+
     }
 }
