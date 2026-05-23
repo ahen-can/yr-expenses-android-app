@@ -55,6 +55,12 @@ dependencies {
     // Fuel HTTP client
     implementation("com.github.kittinunf.fuel:fuel:2.3.1")
 
+    //nav
+    implementation(libs.navigation.compose)
+
+    //MATERIAL ICONS DEPENDENDENCY (22.MAY.26)
+    implementation ("androidx.compose.material:material-icons-extended")
+    
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

@@ -2,9 +2,9 @@ package com.example.yr_expenses
 
 import android.content.Context
 import android.util.Log
-import org.json.JSONArray
+import com.example.yr_expenses.data.LocalJsonStorage
+import com.example.yr_expenses.data.Transaction
 import org.json.JSONObject
-import java.io.File
 
 object SmsParser {
 
@@ -14,12 +14,44 @@ object SmsParser {
 
     fun handleMessage(context: Context, sender: String, body: String) {
 
-        if (!body.contains("debited", ignoreCase = true)) return
+        val txn = parse(body)
+        if (txn == null) {
+            Log.d("SMS_PARSED", "Failed parse: $body")
+            return
+        }
+
+        // Log clean JSON
+        Log.d("SMS_PARSED", JSONObject().apply {
+            put("amount", txn.amount)
+            put("merchant", txn.merchant)
+            put("mode", txn.mode)
+            put("timestamp", txn.timestamp)
+            put("raw", txn.raw)
+        }.toString())
+
+        // 1️⃣ Send to Mint API
+        ApiClient.send(context, JSONObject().apply {
+            put("amount", txn.amount)
+            put("merchant", txn.merchant)
+            put("mode", txn.mode)
+            put("timestamp", txn.timestamp)
+            put("raw", txn.raw)
+        })
+
+        // 2️⃣ Save to local storage
+        LocalJsonStorage.save(context, txn)
+    }
+
+    fun parse(body: String): Transaction? {
+
+        if (!body.contains("debited", ignoreCase = true))
+            return null
 
         val amount = amountRegex.find(body)
             ?.groupValues?.get(1)
             ?.replace(",", "")
             ?.toFloatOrNull()
+            ?: return null
 
         val merchant = merchantRegex.find(body)
             ?.groupValues?.get(1)
@@ -28,28 +60,13 @@ object SmsParser {
 
         val mode = if (upiRegex.containsMatchIn(body)) "UPI" else "Other"
 
-        if (amount != null) {
-
-            val timestamp = System.currentTimeMillis()
-
-            val json = JSONObject().apply {
-                put("amount", amount)
-                put("merchant", merchant)
-                put("mode", mode)
-                put("timestamp", timestamp)
-                put("raw", body)
-            }
-
-            Log.d("SMS_PARSED", json.toString())
-
-            // 1️⃣ Send to Mint
-            ApiClient.send(context, json)
-
-            // 2️⃣ Save locally to JSON
-            LocalJsonStorage.save(context, json)
-
-        } else {
-            Log.d("SMS_PARSED", "Failed parse: $body")
-        }
+        return Transaction(
+            amount = amount,
+            merchant = merchant,
+            mode = mode,
+            timestamp = System.currentTimeMillis(),
+            raw = body,
+            category = "Uncategorized"
+        )
     }
 }
